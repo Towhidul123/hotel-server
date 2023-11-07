@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require ('cors');
+const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
@@ -7,7 +7,7 @@ const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors());
-app. use(express.json());
+app.use(express.json());
 
 
 
@@ -26,66 +26,104 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-   // await client.connect();
+    // await client.connect();
 
-   const serviceCollection = client.db('hotelDB').collection('rooms');
-   const userCollection =  client.db('hotelDB').collection('user');
+    const serviceCollection = client.db('hotelDB').collection('rooms');
+    const userCollection = client.db('hotelDB').collection('user');
 
 
-    app.get('/services',async(req,res)=>{
-        const cursor = serviceCollection.find();
-        const result = await cursor.toArray();
-        res.send(result);
+    app.get('/services', async (req, res) => {
+      const cursor = serviceCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
     })
 
 
     //api based on ID
     app.get('/products/:productId', async (req, res) => {
-        const productId = req.params.productId;
-      
-        console.log('Received productId:', productId);
-        
-        try {
-          const query = {_id: new ObjectId(productId) }; 
-          //console.log(query);
-          const result = await serviceCollection.findOne(query);
-         // console.log(result);
-      
-          if (!result) {
-            res.status(404).json({ error: 'Product not found' }); 
-            return;
-          }
-      
-          res.json(result);
-        
-        } catch (error) {
-          console.error('Error fetching product details:', error);
-          res.status(500).json({ error: 'Internal Server Error' });
+      const productId = req.params.productId;
+
+      console.log('Received productId:', productId);
+
+      try {
+        const query = { _id: new ObjectId(productId) };
+        //console.log(query);
+        const result = await serviceCollection.findOne(query);
+        // console.log(result);
+
+        if (!result) {
+          res.status(404).json({ error: 'Product not found' });
+          return;
         }
-      });
+
+        res.json(result);
+
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
 
 
-       //add to cart
-  app.post('/addToCart', async (req, res) => {
-    try {
-      const newUserProduct = req.body;
-      const result = await userCollection.insertOne(newUserProduct);
+    //add to cart
+    app.post('/addToCart', async (req, res) => {
+      try {
+        const newUserProduct = req.body;
+        const result = await userCollection.insertOne(newUserProduct);
+        res.send(result);
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+    // reading cart
+    app.get('/addToCart', async (req, res) => {
+      console.log(req.query.email);
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email }
+      }
+      const result = await userCollection.find(query).toArray();
       res.send(result);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
+    })
 
 
+    //deleting from cart
 
-   
+    app.delete('/addToCart/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(req.params.id)
+      const query = { _id: new ObjectId(id) }
+      console.log(query);
+
+      const result = await userCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+
+    //updating
+
+    app.patch('/addToCart/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const updatedBooking = req.body;
+      console.log(updatedBooking);
+      const updateDoc ={
+        $set: {
+          status: updatedBooking.status
+        },
+      };
+      const result = await userCollection.updateOne(filter,updateDoc);
+      res.send(result);
+    })
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-   // await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -94,9 +132,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('server is running')
-  })
-  
-  app.listen(port, () => {
-    console.log(`server is running on port: ${port} `)
-  })
+  res.send('server is running')
+})
+
+app.listen(port, () => {
+  console.log(`server is running on port: ${port} `)
+})
