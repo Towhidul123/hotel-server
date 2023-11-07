@@ -9,7 +9,11 @@ const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors({
-  origin: ['http://127.0.0.1:5173'],
+  origin: [
+    'http://127.0.0.1:5173',
+   // 'https://ass-11-5faf8.web.app',
+   // 'https://ass-11-5faf8.firebaseapp.com/'
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -185,6 +189,34 @@ app.patch('/updateBookingDate/:id', async(req,res)=>{
 
 
   
+
+  app.patch('/updateRoomAvailability/:productId', async (req, res) => {
+    const productId = req.params.productId;
+    const { roomCount, availability } = req.body;
+
+    if (roomCount >= 0 && (availability === 'available' || availability === 'unavailable')) {
+        try {
+            const query = { _id: new ObjectId(productId) };
+            const updateDoc = {
+                $set: {
+                    room_count: roomCount,
+                    availability: availability
+                }
+            };
+            const result = await serviceCollection.updateOne(query, updateDoc);
+
+            res.send({ ok: result.modifiedCount > 0 });
+        } catch (error) {
+            console.error('Error updating room availability:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    } else {
+        res.status(400).json({ error: 'Invalid request parameters' });
+    }
+});
+
+
+
   
 
 
