@@ -36,7 +36,8 @@ async function run() {
 
     const serviceCollection = client.db('hotelDB').collection('rooms');
     const userCollection = client.db('hotelDB').collection('user');
-
+    const reviewsCollection = client.db('hotelDB').collection('reviews');
+    
     //auth related api
     app.post('/jwt',async(req,res)=>{
     
@@ -143,6 +144,48 @@ app.patch('/updateBookingDate/:id', async(req,res)=>{
   res.send(result);
 })
 
+
+  //reviews
+  app.post('/reviews', async (req, res) => {
+    try {
+      const review = req.body;
+      const result = await reviewsCollection.insertOne(review);
+      res.send(result);
+    } catch (error) {
+      console.error('Error adding review:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/reviews', async (req, res) => {
+    const roomId = req.query.roomId;
+    try {
+      const query = { roomId: roomId };
+      const result = await reviewsCollection.find(query).toArray();
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+  //review counts
+
+  app.get('/reviewCount/:serviceId', async (req, res) => {
+    const serviceId = req.params.serviceId;
+    try {
+      const query = { roomId: serviceId };
+      const count = await reviewsCollection.countDocuments(query);
+      res.json({ count });
+    } catch (error) {
+      console.error('Error fetching review count:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+
+  
+  
 
 
     // Send a ping to confirm a successful connection
