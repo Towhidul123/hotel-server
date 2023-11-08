@@ -72,7 +72,7 @@ async function run() {
     
     //auth related api
     app.post('/jwt', logger, async(req,res)=>{
-    
+      console.log("auth setting")
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
@@ -145,7 +145,7 @@ async function run() {
    if(req.query.email !== req.user.email){
 
     return res.status(403).send({message:'forbidden access'})
-    
+
    }
       let query = {};
       if (req.query?.email) {
