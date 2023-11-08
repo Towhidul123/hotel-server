@@ -10,9 +10,10 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(cors({
   origin: [
-    'http://127.0.0.1:5173',
+    //'http://127.0.0.1:5173',
+    'http://localhost:5173',
    // 'https://ass-11-5faf8.web.app',
-   // 'https://ass-11-5faf8.firebaseapp.com/'
+   // 'https://ass-11-5faf8.firebaseapp.com'
   ],
   credentials: true
 }));
@@ -49,14 +50,18 @@ async function run() {
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
 
-
-      res
-      .cookie('token', token, {
+      console.log('Before setting cookie');
+      res.cookie(
+        "token",
+        token,
+        {
         httpOnly: true,
-        secure: false,
-      
-      })
-      .send({success: true});
+        secure: process.env.NODE_ENV === "production" ? true: false,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        }
+        )
+        .send({success: true});
+      console.log('After setting cookie');
     
     })
 
@@ -108,6 +113,7 @@ async function run() {
     // reading cart
     app.get('/addToCart', async (req, res) => {
       console.log(req.query.email);
+   //   console.log('toktok',req.cookies.token)
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email }
