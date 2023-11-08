@@ -97,6 +97,7 @@ async function run() {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
+      console.log("made by me")
     })
 
 
