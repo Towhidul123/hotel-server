@@ -11,9 +11,9 @@ const port = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     //'http://127.0.0.1:5173',
-    'http://localhost:5173',
-   // 'https://ass-11-5faf8.web.app',
-   // 'https://ass-11-5faf8.firebaseapp.com'
+    //  'http://localhost:5173',
+    'https://ass-11-5faf8.web.app',
+    'https://ass-11-5faf8.firebaseapp.com'
   ],
   credentials: true
 }));
@@ -22,23 +22,23 @@ app.use(cookieParser());
 
 
 //middleware
-const logger = async(req, res, next) =>{
-  console.log('called:', req.host ,req.originalUrl)
+const logger = async (req, res, next) => {
+  console.log('called:', req.host, req.originalUrl)
   next();
 }
 
 
-const verifyToken = async(req, res, next) =>{
+const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
-  console.log('value of token in middleware',token)
-  if(!token){
-    return res.status(401).send({message: 'not authorized'})
+  console.log('value of token in middleware', token)
+  if (!token) {
+    return res.status(401).send({ message: 'not authorized' })
   }
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err,decoded) =>{
-    if(err){
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
       console.log(err)
-      return res.status(401).send({message:'unauthorized'})
+      return res.status(401).send({ message: 'unauthorized' })
     }
     console.log('value in the token', decoded)
     req.user = decoded;
@@ -46,7 +46,7 @@ const verifyToken = async(req, res, next) =>{
     next();
   })
 
- 
+
 }
 
 
@@ -69,27 +69,27 @@ async function run() {
     const serviceCollection = client.db('hotelDB').collection('rooms');
     const userCollection = client.db('hotelDB').collection('user');
     const reviewsCollection = client.db('hotelDB').collection('reviews');
-    
+
     //auth related api
-    app.post('/jwt', logger, async(req,res)=>{
+    app.post('/jwt', logger, async (req, res) => {
       console.log("auth setting")
       const user = req.body;
       console.log(user);
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '3h' })
 
       console.log('Before setting cookie');
       res.cookie(
         "token",
         token,
         {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production" ? true: false,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         }
-        )
-        .send({success: true});
+      )
+        .send({ success: true });
       console.log('After setting cookie');
-    
+
     })
 
     //services related api
@@ -139,15 +139,15 @@ async function run() {
       }
     });
     // reading cart
-    app.get('/addToCart',verifyToken, async (req, res) => {
+    app.get('/addToCart', verifyToken, async (req, res) => {
       console.log(req.query.email);
-   //   console.log('toktok',req.cookies.token)
-   console.log('user in the valid token', req.user)
-   if(req.query.email !== req.user.email){
+      //   console.log('toktok',req.cookies.token)
+      console.log('user in the valid token', req.user)
+      if (req.query.email !== req.user.email) {
 
-    return res.status(403).send({message:'forbidden access'})
+        return res.status(403).send({ message: 'forbidden access' })
 
-   }
+      }
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email }
@@ -170,94 +170,97 @@ async function run() {
       res.send(result);
     })
 
+
+
     //updating
 
     // Add a new route for updating the booking date
-app.patch('/updateBookingDate/:id', async(req,res)=>{
-  const id = req.params.id;
-  const filter = {_id: new ObjectId(id)};
-  const updatedBooking = req.body;
-  const newDate = updatedBooking.newDate; // Assuming you're sending the new date in the request body
+    app.patch('/updateBookingDate/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedBooking = req.body;
+      const newDate = updatedBooking.newDate; // Assuming you're sending the new date in the request body
 
-  const updateDoc ={
-    $set: {
-      formattedDate: newDate // Update the property name accordingly
-    },
-  };
-  const result = await userCollection.updateOne(filter, updateDoc);
-  res.send(result);
-})
-
-
-  //reviews
-  app.post('/reviews', async (req, res) => {
-    try {
-      const review = req.body;
-      const result = await reviewsCollection.insertOne(review);
+      const updateDoc = {
+        $set: {
+          formattedDate: newDate // Update the property name accordingly
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
-    } catch (error) {
-      console.error('Error adding review:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
-
-  app.get('/reviews', async (req, res) => {
-    const roomId = req.query.roomId;
-    try {
-      const query = { roomId: roomId };
-      const result = await reviewsCollection.find(query).toArray();
-      res.json(result);
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
-  
-  //review counts
-
-  app.get('/reviewCount/:serviceId', async (req, res) => {
-    const serviceId = req.params.serviceId;
-    try {
-      const query = { roomId: serviceId };
-      const count = await reviewsCollection.countDocuments(query);
-      res.json({ count });
-    } catch (error) {
-      console.error('Error fetching review count:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
+    })
 
 
-  
+    //reviews
+    app.post('/reviews', async (req, res) => {
+      try {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+      } catch (error) {
+        console.error('Error adding review:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
 
-  app.patch('/updateRoomAvailability/:productId', async (req, res) => {
-    const productId = req.params.productId;
-    const { roomCount, availability } = req.body;
+    app.get('/reviews', async (req, res) => {
+      const roomId = req.query.roomId;
+      try {
+        const query = { roomId: roomId };
+        const result = await reviewsCollection.find(query).toArray();
+        res.json(result);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
 
-    if (roomCount >= 0 && (availability === 'available' || availability === 'unavailable')) {
+    //review counts
+
+    app.get('/reviewCount/:serviceId', async (req, res) => {
+      const serviceId = req.params.serviceId;
+      try {
+        const query = { roomId: serviceId };
+        const count = await reviewsCollection.countDocuments(query);
+        res.json({ count });
+      } catch (error) {
+        console.error('Error fetching review count:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+
+
+
+    app.patch('/updateRoomAvailability/:productId', async (req, res) => {
+      const productId = req.params.productId;
+      const { roomCount, availability } = req.body;
+
+      if (roomCount >= 0 && (availability === 'available' || availability === 'unavailable')) {
         try {
-            const query = { _id: new ObjectId(productId) };
-            const updateDoc = {
-                $set: {
-                    room_count: roomCount,
-                    availability: availability
-                }
-            };
-            const result = await serviceCollection.updateOne(query, updateDoc);
+          const query = { _id: new ObjectId(productId) };
+          const updateDoc = {
+            $set: {
+              room_count: roomCount,
+              availability: availability
+            }
+          };
+          const result = await serviceCollection.updateOne(query, updateDoc);
 
-            res.send({ ok: result.modifiedCount > 0 });
+          res.send({ ok: result.modifiedCount > 0 });
         } catch (error) {
-            console.error('Error updating room availability:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
+          console.error('Error updating room availability:', error);
+          res.status(500).json({ error: 'Internal Server Error' });
         }
-    } else {
+      } else {
         res.status(400).json({ error: 'Invalid request parameters' });
-    }
-});
+      }
+    });
 
 
 
-  
+
+
 
 
     // Send a ping to confirm a successful connection
